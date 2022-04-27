@@ -1,48 +1,56 @@
+""" RawImageDelete
+
+A short python script delete raw image files (.nef) in a directory that doesn't have the .jpeg files with the same name.
+
+Uses send2trash module to delete files and tkinter for prompting message boxes, etc.
+
+"""
+
 import os
 from send2trash import send2trash
 import sys
+import tkinter as tk
+from tkinter import filedialog, messagebox
 
 is_verbose = True
 
 def customprint(message):
+    """Prints a message to console."""
     if is_verbose: print(message)
 
-inputDir = ''
+def starttk():
+    """Starts tk with the tk window hidden."""
+    root = tk.Tk()
+    root.withdraw()
 
-if len(sys.argv) > 1:
-    inputDir = sys.argv[1]
+starttk()
 
-if os.path.exists(inputDir):
-    currentdir = inputDir
-    customprint('Set \'{0}\' as the target directory.'.format(currentdir))
-else:
-    currentdir = os.getcwd()
-    if inputDir == '':
-        message = 'Set \'{0}\' as the target directory.'.format(currentdir)
-    else:
-        message = '\'{0}\' is not a valid directory. Setting \'{1}\' as the target directory.'.format(inputDir, currentdir)    
-    customprint(message)
+messagebox.showinfo('RawImageDelete', 'Select the target folder')
+
+# filedialog.askdirectory does not return the path in the os format, so using os.path.normpath() to convert
+currentdir = os.path.normpath(filedialog.askdirectory())
+
+if not os.path.isdir(currentdir): 
+    exit()
 
 neffiles = [f for f in os.listdir(currentdir) if os.path.isfile(os.path.join(currentdir, f)) and os.path.splitext(f)[1].lower() == '.nef']
 
 if (len(neffiles) == 0):
-    customprint('No raw images in the directory. Terminating program.')
+    messagebox.showwarning('Warning', 'No raw images in the directory. Terminating program.')
     exit()
 
 jpegfiles = [os.path.splitext(f)[0] for f in os.listdir(currentdir) if os.path.isfile(os.path.join(currentdir, f)) and os.path.splitext(f)[1].lower() in ['.jpg', '.jpeg']]
 
 if(len(jpegfiles) == 0):
-    customprint('There aren\'t any jpeg files in the directory. All the raw images will be deleted. Continue? (Y/N)')
-    inp = input()
-    if inp.lower() == 'n':
+    response = messagebox.askyesno('Confirmation', 'There aren\'t any jpeg files in the directory. All the raw images will be deleted. Continue?')
+    if response == False:
         exit()
 
-deleted_files_count = 0
+deleted_files = []
 
 for neffile in neffiles:
     if os.path.splitext(neffile)[0]  not in jpegfiles:
         send2trash(os.path.join(currentdir, neffile))
-        deleted_files_count += 1
-        customprint('{0} deleted.'.format(neffile))
+        deleted_files.append(neffile)
 
-customprint('Task complete.{0} files deleted.'.format(str(deleted_files_count)))
+messagebox.showinfo('Task complete', 'Task complete. {0} files deleted.'.format(str(len(deleted_files))))
